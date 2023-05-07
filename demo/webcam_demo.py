@@ -27,9 +27,18 @@ EXCLUED_STEPS = [
 
 def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 webcam demo')
-    parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file/url')
-    parser.add_argument('label', help='label file')
+    parser.add_argument('--config',
+                        default=('configs/skeleton/posec3d/'
+                                 'slowonly_r50_8xb16-u48-240e_ntu60-xsub-keypoint.py'),
+                        help='test config file path')
+    parser.add_argument('--checkpoint',
+                        default=('https://download.openmmlab.com/mmaction/skeleton/posec3d/'
+                                 'slowonly_r50_u48_240e_ntu60_xsub_keypoint/'
+                                 'slowonly_r50_u48_240e_ntu60_xsub_keypoint-f3adabf1.pth'),
+                        help='checkpoint file/url')
+    parser.add_argument('--label',
+                        default='tools/data/skeleton/label_map_ntu60.txt',
+                        help='label file')
     parser.add_argument(
         '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
     parser.add_argument(
