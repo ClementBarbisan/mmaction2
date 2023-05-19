@@ -5,12 +5,11 @@ import tempfile
 import cv2
 import mmcv
 import mmengine
-import mmdet
-import mmpose
 import numpy as np
 import torch
 from mmengine import DictAction
 from mmengine.utils import track_iter_progress
+
 from mmaction.apis import (detection_inference, inference_recognizer,
                            init_recognizer, pose_inference)
 from mmaction.registry import VISUALIZERS
@@ -32,20 +31,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='MMAction2 demo')
     parser.add_argument('video', help='video file/url')
     parser.add_argument('out_filename', help='output filename')
-    # parser.add_argument(
-    #     '--device', type=str, default='cuda:0', help='CPU/CUDA device option')
-    # parser.add_argument(
-    #     '--camera-id', type=int, default=0, help='camera device id')
-    # parser.add_argument(
-    #     '--drawing-fps',
-    #     type=int,
-    #     default=20,
-    #     help='Set upper bound FPS value of the output drawing')
-    # parser.add_argument(
-    #     '--inference-fps',
-    #     type=int,
-    #     default=4,
-    #     help='Set upper bound FPS value of model inference')
     parser.add_argument(
         '--config',
         default=('configs/skeleton/posec3d/'
@@ -137,14 +122,15 @@ def visualize(args, frames, data_samples, action_label):
         vis_frames.append(vis_frame)
 
     vid = mpy.ImageSequenceClip(vis_frames, fps=24)
-    vid.write_videofile(args.out_filename, remove_temp=True, codec="libx264")
+    vid.write_videofile(args.out_filename, remove_temp=True)
 
 
 def main():
     args = parse_args()
 
     tmp_dir = tempfile.TemporaryDirectory()
-    frame_paths, frames = frame_extract(args.video, args.short_side)
+    frame_paths, frames = frame_extract(args.video, args.short_side,
+                                        tmp_dir.name)
 
     num_frame = len(frame_paths)
     h, w, _ = frames[0].shape
