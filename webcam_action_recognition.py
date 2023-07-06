@@ -88,8 +88,34 @@ def show_results():
         frame_count += 1
         _, frame = camera.read()
         frame_queue.append(np.array(frame[:, :, ::-1]))
-
-        if (frame_count % 5) == 0:
+        if len(result_queue) != 0:
+            text_info = {}
+            results = result_queue.popleft()
+            sock.send("results".encode("UTF-8"))
+            sock.recv(512)
+            sock.send(str(len(results)).encode("UTF-8"))
+            sock.recv(512)
+            for i, result in enumerate(results):
+                selected_label, score = result
+                sock.send(selected_label.encode("UTF-8"))
+                sock.recv(512)
+                sock.send(str(score).encode("UTF-8"))
+                sock.recv(512)
+                location = (0, 40 + i * 20)
+                text = selected_label + ': ' + str(round(score * 100, 2))
+                text_info[location] = text
+                cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
+                            FONTCOLOR, THICKNESS, LINETYPE)
+            sock.send("##".encode("UTF-8"))
+            sock.recv(512)
+        elif len(text_info) != 0:
+            for location, text in text_info.items():
+                cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
+                            FONTCOLOR, THICKNESS, LINETYPE)
+        else:
+            cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
+                        THICKNESS, LINETYPE)
+        if (frame_count % 2) == 0:
             # 2. Prepare image; grayscale and blur
             prepared_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             prepared_frame = cv2.GaussianBlur(src=prepared_frame, ksize=(5, 5), sigmaX=0)
@@ -123,33 +149,7 @@ def show_results():
                 sock.recv(512)
             sock.send("##".encode("UTF-8"))
             sock.recv(512)
-            if len(result_queue) != 0:
-                text_info = {}
-                results = result_queue.popleft()
-                sock.send("results".encode("UTF-8"))
-                sock.recv(512)
-                sock.send(str(len(results)).encode("UTF-8"))
-                sock.recv(512)
-                for i, result in enumerate(results):
-                    selected_label, score = result
-                    sock.send(selected_label.encode("UTF-8"))
-                    sock.recv(512)
-                    sock.send(str(score).encode("UTF-8"))
-                    sock.recv(512)
-                    location = (0, 40 + i * 20)
-                    text = selected_label + ': ' + str(round(score * 100, 2))
-                    text_info[location] = text
-                    cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
-                                FONTCOLOR, THICKNESS, LINETYPE)
-                sock.send("##".encode("UTF-8"))
-                sock.recv(512)
-            elif len(text_info) != 0:
-                for location, text in text_info.items():
-                    cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
-                                FONTCOLOR, THICKNESS, LINETYPE)
-            else:
-                cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
-                            THICKNESS, LINETYPE)
+
         if contours is not None:
             for contour in contours:
                 if cv2.contourArea(contour) < 500:
