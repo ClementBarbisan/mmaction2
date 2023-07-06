@@ -12,12 +12,7 @@ from mmengine import Config, DictAction
 from mmengine.dataset import Compose, pseudo_collate
 
 from mmaction.apis import init_recognizer
-import socket
-import time
-
-host, port = "127.0.0.1", 25001
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((host, port))
+from mmaction.utils import get_str_type
 
 FONTFACE = cv2.FONT_HERSHEY_COMPLEX_SMALL
 FONTSCALE = 1
@@ -90,10 +85,6 @@ def show_results():
             results = result_queue.popleft()
             for i, result in enumerate(results):
                 selected_label, score = result
-                sock.send(selected_label.encode("UTF-8"))
-                sock.recv(512)
-                sock.send(str(score).encode("UTF-8"))
-                sock.recv(512)
                 if score < threshold:
                     break
                 location = (0, 40 + i * 20)
@@ -179,7 +170,6 @@ def main():
         test_pipeline, frame_queue, result_queue
 
     args = parse_args()
-
     average_size = args.average_size
     threshold = args.threshold
     drawing_fps = args.drawing_fps
@@ -205,12 +195,12 @@ def main():
     pipeline = cfg.test_pipeline
     pipeline_ = pipeline.copy()
     for step in pipeline:
-        if 'SampleFrames' in step['type']:
+        if 'SampleFrames' in get_str_type(step['type']):
             sample_length = step['clip_len'] * step['num_clips']
             data['num_clips'] = step['num_clips']
             data['clip_len'] = step['clip_len']
             pipeline_.remove(step)
-        if step['type'] in EXCLUED_STEPS:
+        if get_str_type(step['type']) in EXCLUED_STEPS:
             # remove step to decode frames
             pipeline_.remove(step)
     test_pipeline = Compose(pipeline_)
