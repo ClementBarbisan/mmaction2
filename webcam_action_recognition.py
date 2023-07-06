@@ -80,45 +80,89 @@ def show_results():
 
     text_info = {}
     cur_time = time.time()
+    frame_count = 0
+    previous_frame = None
+    contours = None
     while True:
         msg = 'Waiting for action ...'
+        frame_count += 1
         _, frame = camera.read()
         frame_queue.append(np.array(frame[:, :, ::-1]))
 
-        if len(result_queue) != 0:
-            text_info = {}
-            results = result_queue.popleft()
+        if (frame_count % 5) == 0:
+            # 2. Prepare image; grayscale and blur
+            prepared_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            prepared_frame = cv2.GaussianBlur(src=prepared_frame, ksize=(5, 5), sigmaX=0)
+            # 3. Set previous frame and continue if there is None
+            if (previous_frame is None):
+                # First frame; there is no previous one yet
+                previous_frame = prepared_frame
+                continue
+
+            # calculate difference and update previous frame
+            diff_frame = cv2.absdiff(src1=previous_frame, src2=prepared_frame)
+            previous_frame = prepared_frame
+
+            # 4. Dilute the image a bit to make differences more seeable; more suitable for contour detection
+            kernel = np.ones((5, 5))
+            diff_frame = cv2.dilate(diff_frame, kernel, 1)
+
+            # 5. Only take different areas that are different enough (>20 / 255)
+            thresh_frame = cv2.threshold(src=diff_frame, thresh=20, maxval=255, type=cv2.THRESH_BINARY)[1]
+            contours, _ = cv2.findContours(image=thresh_frame, mode=cv2.RETR_EXTERNAL,
+                                           method=cv2.CHAIN_APPROX_SIMPLE)
+
+            sock.send("contours".encode("UTF-8"))
+            sock.recv(512)
+            for contour in contours:
+                if cv2.contourArea(contour) < 500:
+                    # too small: skip!
+                    continue
+                (x, y, w, h) = cv2.boundingRect(contour)
+                sock.send((str(x) + "," + str(y) + "," + str(w) + "," + str(h)).encode("UTF-8"))
+                sock.recv(512)
             sock.send("##".encode("UTF-8"))
             sock.recv(512)
-            for i, result in enumerate(results):
-                selected_label, score = result
-                sock.send(selected_label.encode("UTF-8"))
+            if len(result_queue) != 0:
+                text_info = {}
+                results = result_queue.popleft()
+                sock.send("results".encode("UTF-8"))
                 sock.recv(512)
-                sock.send(str(score).encode("UTF-8"))
+                sock.send(str(len(results)).encode("UTF-8"))
                 sock.recv(512)
-                if score < threshold:
-                    break
-                location = (0, 40 + i * 20)
-                text = selected_label + ': ' + str(round(score * 100, 2))
-                text_info[location] = text
-                cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
-                            FONTCOLOR, THICKNESS, LINETYPE)
-            sock.send("!!".encode("UTF-8"))
-            sock.recv(512)
-        elif len(text_info) != 0:
-            for location, text in text_info.items():
-                cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
-                            FONTCOLOR, THICKNESS, LINETYPE)
-
-        else:
-            cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
-                        THICKNESS, LINETYPE)
-
+                for i, result in enumerate(results):
+                    selected_label, score = result
+                    sock.send(selected_label.encode("UTF-8"))
+                    sock.recv(512)
+                    sock.send(str(score).encode("UTF-8"))
+                    sock.recv(512)
+                    location = (0, 40 + i * 20)
+                    text = selected_label + ': ' + str(round(score * 100, 2))
+                    text_info[location] = text
+                    cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
+                                FONTCOLOR, THICKNESS, LINETYPE)
+                sock.send("##".encode("UTF-8"))
+                sock.recv(512)
+            elif len(text_info) != 0:
+                for location, text in text_info.items():
+                    cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
+                                FONTCOLOR, THICKNESS, LINETYPE)
+            else:
+                cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
+                            THICKNESS, LINETYPE)
+        if contours is not None:
+            for contour in contours:
+                if cv2.contourArea(contour) < 500:
+                    # too small: skip!
+                    continue
+                (x, y, w, h) = cv2.boundingRect(contour)
+                cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(0, 255, 0), thickness=2)
         cv2.imshow('camera', frame)
         ch = cv2.waitKey(1)
 
         if ch == 27 or ch == ord('q') or ch == ord('Q'):
             camera.release()
+            sock.close()
             cv2.destroyAllWindows()
             break
 
