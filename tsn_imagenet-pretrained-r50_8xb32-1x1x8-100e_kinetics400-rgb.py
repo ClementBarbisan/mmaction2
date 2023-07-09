@@ -109,7 +109,7 @@ test_pipeline = [
     dict(type='PackActionInputs')
 ]
 train_dataloader = dict(
-    batch_size=4,
+    batch_size=8,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
@@ -136,7 +136,7 @@ train_dataloader = dict(
             dict(type='PackActionInputs')
         ]))
 val_dataloader = dict(
-    batch_size=4,
+    batch_size=8,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
@@ -160,7 +160,7 @@ val_dataloader = dict(
         ],
         test_mode=True))
 test_dataloader = dict(
-    batch_size=4,
+    batch_size=1,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
