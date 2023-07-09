@@ -16,9 +16,11 @@ import socket
 import time
 
 host, port = "127.0.0.1", 25001
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((host, port))
-
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+except OSError as msg:
+    sock = None
 FONTFACE = cv2.FONT_HERSHEY_COMPLEX_SMALL
 FONTSCALE = 1
 FONTCOLOR = (255, 255, 255)  # BGR, white
@@ -91,23 +93,26 @@ def show_results():
         if len(result_queue) != 0:
             text_info = {}
             results = result_queue.popleft()
-            sock.send("results".encode("UTF-8"))
-            sock.recv(512)
-            sock.send(str(len(results)).encode("UTF-8"))
-            sock.recv(512)
+            if sock is not None :
+                sock.send("results".encode("UTF-8"))
+                sock.recv(512)
+                sock.send(str(len(results)).encode("UTF-8"))
+                sock.recv(512)
             for i, result in enumerate(results):
                 selected_label, score = result
-                sock.send(selected_label.encode("UTF-8"))
-                sock.recv(512)
-                sock.send(str(score).encode("UTF-8"))
-                sock.recv(512)
+                if sock is not None:
+                    sock.send(selected_label.encode("UTF-8"))
+                    sock.recv(512)
+                    sock.send(str(score).encode("UTF-8"))
+                    sock.recv(512)
                 location = (0, 40 + i * 20)
                 text = selected_label + ': ' + str(round(score * 100, 2))
                 text_info[location] = text
                 cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
                             FONTCOLOR, THICKNESS, LINETYPE)
-            sock.send("##".encode("UTF-8"))
-            sock.recv(512)
+            if sock is not None :
+                sock.send("##".encode("UTF-8"))
+                sock.recv(512)
         elif len(text_info) != 0:
             for location, text in text_info.items():
                 cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
@@ -137,19 +142,18 @@ def show_results():
             thresh_frame = cv2.threshold(src=diff_frame, thresh=20, maxval=255, type=cv2.THRESH_BINARY)[1]
             contours, _ = cv2.findContours(image=thresh_frame, mode=cv2.RETR_EXTERNAL,
                                            method=cv2.CHAIN_APPROX_SIMPLE)
-
-            sock.send("contours".encode("UTF-8"))
-            sock.recv(512)
-            for contour in contours:
-                if cv2.contourArea(contour) < 500:
-                    # too small: skip!
-                    continue
-                (x, y, w, h) = cv2.boundingRect(contour)
-                sock.send((str(x) + "," + str(y) + "," + str(w) + "," + str(h)).encode("UTF-8"))
+            if sock is not None :
+                sock.send("contours".encode("UTF-8"))
                 sock.recv(512)
-            sock.send("##".encode("UTF-8"))
-            sock.recv(512)
-
+                for contour in contours:
+                    if cv2.contourArea(contour) < 500:
+                        # too small: skip!
+                        continue
+                    (x, y, w, h) = cv2.boundingRect(contour)
+                    sock.send((str(x) + "," + str(y) + "," + str(w) + "," + str(h)).encode("UTF-8"))
+                    sock.recv(512)
+                sock.send("##".encode("UTF-8"))
+                sock.recv(512)
         if contours is not None:
             for contour in contours:
                 if cv2.contourArea(contour) < 500:
@@ -162,7 +166,8 @@ def show_results():
 
         if ch == 27 or ch == ord('q') or ch == ord('Q'):
             camera.release()
-            sock.close()
+            if sock is not None:
+                sock.close()
             cv2.destroyAllWindows()
             break
 
@@ -240,7 +245,11 @@ def main():
 
     # Build the recognizer from a config file and checkpoint file/url
     model = init_recognizer(cfg, args.checkpoint, device=args.device)
-    camera = cv2.VideoCapture(args.camera_id)
+    index = args.camera_id
+    camera = cv2.VideoCapture(index)
+    while not camera.grab():
+        index += 1
+        camera = cv2.VideoCapture(index)
     data = dict(img_shape=None, modality='RGB', label=-1)
 
     with open(args.label, 'r') as f:
