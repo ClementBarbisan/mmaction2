@@ -103,7 +103,7 @@ def show_results():
                 if sock is not None:
                     sock.send(selected_label.encode("UTF-8"))
                     sock.recv(512)
-                    sock.send(str(score).encode("UTF-8"))
+                    sock.send(str(round(score * 100, 2)).encode("UTF-8"))
                     sock.recv(512)
                 location = (0, 40 + i * 20)
                 text = selected_label + ': ' + str(round(score * 100, 2))
