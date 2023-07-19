@@ -120,7 +120,7 @@ def show_results():
         else:
             cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
                         THICKNESS, LINETYPE)
-        if (frame_count % 2) == 0:
+        if (frame_count % 5) == 0:
             # 2. Prepare image; grayscale and blur
             prepared_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             prepared_frame = cv2.GaussianBlur(src=prepared_frame, ksize=(5, 5), sigmaX=0)
