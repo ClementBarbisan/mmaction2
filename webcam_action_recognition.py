@@ -63,6 +63,11 @@ def parse_args():
         default=4,
         help='Set upper bound FPS value of model inference')
     parser.add_argument(
+        '--image',
+        type=bool,
+        default=False,
+        help='Display frame')
+    parser.add_argument(
         '--cfg-options',
         nargs='+',
         action=DictAction,
@@ -105,19 +110,20 @@ def show_results():
                     sock.recv(512)
                     sock.send(str(round(score * 100, 2)).encode("UTF-8"))
                     sock.recv(512)
-                location = (0, 40 + i * 20)
-                text = selected_label + ': ' + str(round(score * 100, 2))
-                text_info[location] = text
-                cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
-                            FONTCOLOR, THICKNESS, LINETYPE)
+                if image :
+                    location = (0, 40 + i * 20)
+                    text = selected_label + ': ' + str(round(score * 100, 2))
+                    text_info[location] = text
+                    cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
+                                FONTCOLOR, THICKNESS, LINETYPE)
             if sock is not None :
                 sock.send("##".encode("UTF-8"))
                 sock.recv(512)
-        elif len(text_info) != 0:
+        elif len(text_info) != 0 and image:
             for location, text in text_info.items():
                 cv2.putText(frame, text, location, FONTFACE, FONTSCALE,
                             FONTCOLOR, THICKNESS, LINETYPE)
-        else:
+        elif image:
             cv2.putText(frame, msg, (0, 40), FONTFACE, FONTSCALE, MSGCOLOR,
                         THICKNESS, LINETYPE)
         if (frame_count % 5) == 0:
@@ -154,14 +160,15 @@ def show_results():
                     sock.recv(512)
                 sock.send("##".encode("UTF-8"))
                 sock.recv(512)
-        if contours is not None:
+        if contours is not None and image:
             for contour in contours:
                 if cv2.contourArea(contour) < 500:
                     # too small: skip!
                     continue
                 (x, y, w, h) = cv2.boundingRect(contour)
                 cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(0, 255, 0), thickness=2)
-        cv2.imshow('camera', frame)
+        if image:
+            cv2.imshow('camera', frame)
         ch = cv2.waitKey(1)
 
         if ch == 27 or ch == ord('q') or ch == ord('Q'):
@@ -226,7 +233,7 @@ def inference():
 
 
 def main():
-    global average_size, threshold, drawing_fps, inference_fps, \
+    global average_size, threshold, drawing_fps, inference_fps, image, \
         device, model, camera, data, label, sample_length, \
         test_pipeline, frame_queue, result_queue
 
@@ -236,7 +243,7 @@ def main():
     threshold = args.threshold
     drawing_fps = args.drawing_fps
     inference_fps = args.inference_fps
-
+    image = args.image
     device = torch.device(args.device)
 
     cfg = Config.fromfile(args.config)
