@@ -1,6 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import time
 from collections import deque
 from operator import itemgetter
 from threading import Thread
