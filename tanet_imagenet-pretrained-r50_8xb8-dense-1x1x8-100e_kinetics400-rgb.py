@@ -5,11 +5,11 @@ _base_ = [
 
 # dataset settings
 dataset_type = 'VideoDataset'
-data_root = 'data/kinetics400_tiny/train'
-data_root_val = 'data/kinetics400_tiny/val'
-ann_file_train = 'data/kinetics400_tiny/kinetics_tiny_train_video.txt'
-ann_file_val = 'data/kinetics400_tiny/kinetics_tiny_val_video.txt'
-ann_file_test = 'data/kinetics400_tiny/kinetics_tiny_val_video.txt'
+data_root = 'data/faille/train'
+data_root_val = 'data/faille/val'
+ann_file_train = 'data/faille/faille_train_video.txt'
+ann_file_val = 'data/faille/faille_val_video.txt'
+ann_file_test = 'data/faille/faille_val_video.txt'
 
 file_client_args = dict(io_backend='disk')
 train_pipeline = [
@@ -59,8 +59,8 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
-    batch_size=8,
-    num_workers=8,
+    batch_size=6,
+    num_workers=6,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
@@ -69,8 +69,8 @@ train_dataloader = dict(
         data_prefix=dict(video=data_root),
         pipeline=train_pipeline))
 val_dataloader = dict(
-    batch_size=8,
-    num_workers=8,
+    batch_size=6,
+    num_workers=6,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
@@ -81,7 +81,7 @@ val_dataloader = dict(
         test_mode=True))
 test_dataloader = dict(
     batch_size=1,
-    num_workers=8,
+    num_workers=6,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
@@ -113,4 +113,4 @@ default_hooks = dict(
 #   - `enable` means enable scaling LR automatically
 #       or not by default.
 #   - `base_batch_size` = (8 GPUs) x (8 samples per GPU).
-auto_scale_lr = dict(enable=False, base_batch_size=64)
+auto_scale_lr = dict(enable=True, base_batch_size=64)

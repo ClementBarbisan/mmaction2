@@ -22,7 +22,7 @@ except OSError as msg:
     sock = None
 FONTFACE = cv2.FONT_HERSHEY_COMPLEX_SMALL
 FONTSCALE = 1
-FONTCOLOR = (255, 255, 255)  # BGR, white
+FONTCOLOR = (0, 255, 0)  # BGR, green
 MSGCOLOR = (128, 128, 128)  # BGR, gray
 THICKNESS = 1
 LINETYPE = 1
@@ -44,22 +44,22 @@ def parse_args():
     parser.add_argument(
         '--threshold',
         type=float,
-        default=0.01,
+        default=0.05,
         help='recognition score threshold')
     parser.add_argument(
         '--average-size',
         type=int,
-        default=1,
+        default=15,
         help='number of latest clips to be averaged for prediction')
     parser.add_argument(
         '--drawing-fps',
         type=int,
-        default=20,
+        default=30,
         help='Set upper bound FPS value of the output drawing')
     parser.add_argument(
         '--inference-fps',
         type=int,
-        default=4,
+        default=60,
         help='Set upper bound FPS value of model inference')
     parser.add_argument(
         '--image',
@@ -144,14 +144,14 @@ def show_results():
             diff_frame = cv2.dilate(diff_frame, kernel, 1)
 
             # 5. Only take different areas that are different enough (>20 / 255)
-            thresh_frame = cv2.threshold(src=diff_frame, thresh=100, maxval=255, type=cv2.THRESH_BINARY)[1]
+            thresh_frame = cv2.threshold(src=diff_frame, thresh=50, maxval=255, type=cv2.THRESH_BINARY)[1]
             contours, _ = cv2.findContours(image=thresh_frame, mode=cv2.RETR_EXTERNAL,
                                            method=cv2.CHAIN_APPROX_SIMPLE)
             if sock is not None :
                 sock.send("contours".encode("UTF-8"))
                 sock.recv(512)
                 for contour in contours:
-                    if cv2.contourArea(contour) < 500:
+                    if cv2.contourArea(contour) < 400:
                         # too small: skip!
                         continue
                     (x, y, w, h) = cv2.boundingRect(contour)
@@ -161,7 +161,7 @@ def show_results():
                 sock.recv(512)
         if contours is not None and image:
             for contour in contours:
-                if cv2.contourArea(contour) < 500:
+                if cv2.contourArea(contour) < 400:
                     # too small: skip!
                     continue
                 (x, y, w, h) = cv2.boundingRect(contour)
